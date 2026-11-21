@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Insta Lucky Winner Picker — Studio</title>
+  <link rel="stylesheet" href="studio.css" />
+</head>
+<body>
+  <canvas id="confettiCanvas" aria-hidden="true"></canvas>
+
+  <div class="app-container">
+    <!-- Top Navigation Bar -->
+    <header class="topbar">
+      <div class="brand-group">
+        <div class="logo-badge" aria-hidden="true">🏆</div>
+        <div>
+          <h1>Insta Lucky Winner Picker</h1>
+          <div class="post-context" id="postContextBar">
+            <span id="postSourceLabel">No post loaded yet — collect from an Instagram tab or try Sample Data</span>
+            <a id="postExternalLink" class="post-link hidden" href="#" target="_blank" rel="noopener noreferrer">View Post &nearr;</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <button id="loadDemoBtn" class="btn btn-outline">
+          ✨ Load Sample Giveaway
+        </button>
+        <button id="openImportModalBtn" class="btn btn-outline">
+          📥 Paste / Import CSV or JSON
+        </button>
+        <button id="exportCsvBtn" class="btn btn-outline" disabled>
+          📤 Export CSV
+        </button>
+      </div>
+    </header>
+
+    <!-- Direct Instagram Link Reader (Works in any browser without extension) -->
+    <section id="directLinkBanner" class="direct-link-card" aria-label="Direct Instagram Link Reader">
+      <div class="direct-link-header">
+        <div class="direct-link-title-group">
+          <span class="direct-link-icon" aria-hidden="true">🔗</span>
+          <div>
+            <div class="direct-link-title-row">
+              <strong>Direct Instagram Post / Reel Reader</strong>
+              <span class="direct-link-tag">No Extension Required</span>
+            </div>
+            <p class="direct-link-subtitle">Paste any Instagram link to load and analyze every comment in real time</p>
+          </div>
+        </div>
+        <div class="direct-link-session-badge-wrap">
+          <button type="button" id="openSessionModalBtn" class="session-status-chip" title="Click to configure Instagram session">
+            <span id="sessionStatusDot" class="status-dot"></span>
+            <span id="sessionStatusText">Checking login status...</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="direct-link-input-row">
+        <div class="input-with-icon">
+          <span class="input-icon" aria-hidden="true">📸</span>
+          <input
+            type="url"
+            id="directPostUrlInput"
+            class="text-input direct-url-input"
+            placeholder="Paste link: https://www.instagram.com/p/DFRxjqKxy8d/ or /reel/..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button type="button" id="clearDirectUrlBtn" class="input-clear-btn hidden" aria-label="Clear URL">&times;</button>
+        </div>
+        <div class="direct-link-controls">
+          <label class="toggle-item-inline" for="directIncludeRepliesCheck" title="Also fetch nested comment replies">
+            <input type="checkbox" id="directIncludeRepliesCheck" />
+            <span>Include replies</span>
+          </label>
+          <button type="button" id="directFetchCommentsBtn" class="btn btn-primary direct-action-btn">
+            🚀 Fetch All Comments
+          </button>
+          <button type="button" id="directStopSyncBtn" class="btn btn-danger direct-action-btn hidden">
+            ⏹ Stop &amp; Use Loaded
+          </button>
+        </div>
+      </div>
+
+      <!-- Instant Cache Notice Banner (for 5k+ comments stored previously) -->
+      <div id="cacheNoticeBanner" class="cache-notice-banner hidden">
+        <div class="cache-notice-left">
+          <span class="cache-bolt" aria-hidden="true">⚡</span>
+          <div>
+            <strong>Instant Local Cache:</strong>
+            <span id="cacheCountText">0</span> comments loaded (<span id="cacheDateText">just now</span>) — ready to draw!
+          </div>
+        </div>
+        <div class="cache-notice-actions">
+          <button type="button" id="forceSyncNewBtn" class="btn btn-outline btn-xs" title="Check Instagram for new comments added since last sync">
+            🔄 Read New Comments
+          </button>
+          <button type="button" id="clearCacheBtn" class="text-btn btn-xs" title="Discard cached comments for this post">
+            Clear Cache
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Stream Status Message and Progress Bar -->
+      <div id="directSyncStatusWrap" class="direct-status-wrap hidden">
+        <div class="direct-status-info">
+          <span class="spinner-small" id="directSyncSpinner" aria-hidden="true"></span>
+          <span id="directSyncStatusMsg" class="direct-status-msg">Connecting to Instagram...</span>
+        </div>
+        <div id="directProgressBarTrack" class="progress-track hidden">
+          <div id="directProgressBarFill" class="progress-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Instagram Tab Sync Banner (Extension Mode) -->
+    <section id="liveSyncBanner" class="sync-banner hidden" aria-live="polite">
+      <div class="sync-left">
+        <span id="syncDot" class="sync-dot"></span>
+        <div class="sync-info">
+          <div class="sync-title-row">
+            <strong>Instagram Tab Connected:</strong>
+            <select id="igTabSelect" class="ig-tab-select" aria-label="Select open Instagram post tab"></select>
+          </div>
+          <p id="syncStatusMsg" class="sync-msg">Checking open Instagram post...</p>
+        </div>
+      </div>
+      <div class="sync-actions">
+        <button id="studioStartSyncBtn" class="btn btn-primary">
+          🔄 Read All Comments
+        </button>
+        <button id="studioScrollSyncBtn" class="btn btn-outline" title="Scrolls the Instagram tab directly to load comments">
+          📜 Visual Scroll Mode
+        </button>
+        <button id="studioStopSyncBtn" class="btn btn-danger hidden">
+          ⏹ Pause &amp; Use Loaded
+        </button>
+      </div>
+    </section>
+
+    <!-- Summary Metrics -->
+    <section class="metrics-strip" aria-label="Comment statistics">
+      <div class="metric-card">
+        <span class="metric-label">Total Comments Read</span>
+        <span class="metric-value" id="statTotalComments">0</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Unique Commenters</span>
+        <span class="metric-value" id="statUniqueUsers">0</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Qualifying Comments</span>
+        <span class="metric-value" id="statQualifyingComments">0</span>
+      </div>
+      <div class="metric-card highlight">
+        <span class="metric-label">Eligible Draw Entries</span>
+        <span class="metric-value" id="statEligibleEntries">0</span>
+      </div>
+    </section>
+
+    <!-- Main 2-Column Workspace -->
+    <div class="workspace-grid">
+      <!-- Left Column: Giveaway Rules & Filters -->
+      <aside class="panel filters-panel">
+        <div class="panel-header">
+          <h2>Giveaway Rules &amp; Filters</h2>
+          <button id="resetFiltersBtn" class="text-btn">Reset</button>
+        </div>
+
+        <div class="form-group">
+          <label class="group-label">Entry Mode</label>
+          <div class="segmented-control" role="radiogroup" aria-label="Entry counting mode">
+            <button type="button" id="modeUniqueBtn" class="seg-btn active" data-mode="unique">
+              1 Entry / Unique User
+            </button>
+            <button type="button" id="modeAllBtn" class="seg-btn" data-mode="all">
+              Every Comment = 1 Entry
+            </button>
+          </div>
+          <p class="field-hint">
+            Comments are checked against filters first so a user's qualifying 2nd comment still counts.
+          </p>
+        </div>
+
+        <div class="form-group">
+          <div class="label-with-meta">
+            <label for="keywordInput" class="group-label">Required Keyword / Hashtag</label>
+            <select id="keywordModeSelect" class="mini-select" aria-label="Keyword match mode">
+              <option value="any">Match Any</option>
+              <option value="all">Match All</option>
+            </select>
+          </div>
+          <input
+            type="text"
+            id="keywordInput"
+            class="text-input"
+            placeholder="Optional — e.g. #giveaway, summer"
+          />
+          <p class="field-hint">Case-insensitive. Separate multiple keywords with commas.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="minMentionsInput" class="group-label">Minimum Friends Tagged (<code>@mentions</code>)</label>
+          <div class="stepper-row">
+            <button type="button" id="mentionsDecBtn" class="stepper-btn" aria-label="Decrease minimum mentions">&minus;</button>
+            <input
+              type="number"
+              id="minMentionsInput"
+              class="number-input"
+              min="0"
+              max="20"
+              value="0"
+            />
+            <button type="button" id="mentionsIncBtn" class="stepper-btn" aria-label="Increase minimum mentions">+</button>
+            <span class="stepper-caption">unique @mentions in comment</span>
+          </div>
+          <p class="field-hint">Self-tags and repeated tags of the same friend in one comment don't count.</p>
+        </div>
+
+        <div class="form-group">
+          <div class="label-with-meta">
+            <label for="excludeUsersInput" class="group-label">Exclude Usernames</label>
+            <button type="button" id="addOwnerExcludeBtn" class="chip-btn hidden">
+              + Exclude Author
+            </button>
+          </div>
+          <textarea
+            id="excludeUsersInput"
+            class="text-input textarea-sm"
+            rows="2"
+            placeholder="Optional — e.g. brand_account, moderator1"
+          ></textarea>
+        </div>
+
+        <div class="toggles-group">
+          <label class="toggle-item" for="includeRepliesCheck">
+            <input type="checkbox" id="includeRepliesCheck" />
+            <span>Include nested comment replies <em id="replyCountHint"></em></span>
+          </label>
+          <label class="toggle-item" for="animateSpinCheck">
+            <input type="checkbox" id="animateSpinCheck" checked />
+            <span>Drumroll shuffle animation (2.8s)</span>
+          </label>
+        </div>
+
+        <div class="filter-summary" id="filterSummaryBox">
+          No comments loaded yet.
+        </div>
+      </aside>
+
+      <!-- Right Column: Lucky Winner Stage -->
+      <main class="panel stage-panel">
+        <div class="stage-box" id="stageBox">
+          <!-- Idle / Ready State -->
+          <div id="stageIdle" class="stage-state">
+            <div class="trophy-orb">🎲</div>
+            <h2 id="stageReadyTitle">Ready to Pick a Lucky Winner</h2>
+            <p id="stageReadySub" class="stage-sub">
+              Load comments from an Instagram post (or click <strong>Load Sample Giveaway</strong>) to start the draw.
+            </p>
+            <button id="pickWinnerPrimaryBtn" class="btn btn-draw" disabled>
+              🏆 Pick Single Lucky Winner
+            </button>
+          </div>
+
+          <!-- Drumroll / Spinning State -->
+          <div id="stageSpinning" class="stage-state hidden">
+            <span class="spin-kicker">Selecting fairly via Web Crypto CSPRNG...</span>
+            <div class="slot-window">
+              <div class="slot-handle" id="slotTickerHandle">@username</div>
+              <div class="slot-preview" id="slotTickerComment">Reading entries...</div>
+            </div>
+          </div>
+
+          <!-- Winner Revealed State -->
+          <div id="stageWinner" class="stage-state hidden">
+            <div class="winner-pill">🎉 LUCKY WINNER SELECTED 🎉</div>
+
+            <div class="winner-profile">
+              <div class="avatar-ring">
+                <div class="avatar-fallback" id="winnerAvatarInitial">W</div>
+                <img id="winnerAvatarImg" class="avatar-img hidden" alt="" />
+              </div>
+              <div class="winner-identity">
+                <a
+                  id="winnerUsernameLink"
+                  class="winner-handle"
+                  href="#"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >@winner</a>
+                <span id="winnerFullName" class="winner-fullname"></span>
+                <div class="winner-meta-chips">
+                  <span class="meta-chip" id="winnerOddsChip">1 in 1 odds</span>
+                  <span class="meta-chip" id="winnerQualCountChip">1 qualifying comment</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="winning-comment-card">
+              <div class="comment-card-header">
+                <span>Winning Comment</span>
+                <span id="winnerTimestamp" class="comment-date"></span>
+              </div>
+              <p id="winnerCommentText" class="winning-comment-body"></p>
+              <div id="winnerMentionsRow" class="mentions-row hidden"></div>
+            </div>
+
+            <details id="allUserCommentsDetails" class="extra-comments hidden">
+              <summary id="allUserCommentsSummary">View all qualifying comments from this user</summary>
+              <ul id="allUserCommentsList" class="extra-comments-list"></ul>
+            </details>
+
+            <div class="winner-actions">
+              <button id="pickBackupWinnerBtn" class="btn btn-primary">
+                🔄 Pick Backup / Next Winner (Exclude Previous)
+              </button>
+              <button id="redrawFreshBtn" class="btn btn-outline">
+                🎲 Fresh Re-Draw
+              </button>
+              <button id="copyWinnerBtn" class="btn btn-outline">
+                📋 Copy Announcement
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Draw History (for backup draws / audit log) -->
+        <section id="historySection" class="history-section hidden">
+          <div class="history-header">
+            <h3>Draw Audit History (<span id="historyCount">0</span>)</h3>
+            <button id="clearHistoryBtn" class="text-btn">Clear History &amp; Re-Include Won Users</button>
+          </div>
+          <div id="historyList" class="history-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Bottom Explorer Table -->
+    <section class="panel explorer-panel">
+      <div class="explorer-header">
+        <div class="tabs" role="tablist">
+          <button id="tabEligibleBtn" class="tab-btn active" role="tab">
+            Eligible Entries (<span id="tabEligibleCount">0</span>)
+          </button>
+          <button id="tabAllCommentsBtn" class="tab-btn" role="tab">
+            All Read Comments (<span id="tabAllCount">0</span>)
+          </button>
+        </div>
+
+        <div class="search-wrap">
+          <input
+            type="search"
+            id="searchInput"
+            class="text-input search-input"
+            placeholder="Search @username or comment text..."
+          />
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table class="comments-table">
+          <thead>
+            <tr>
+              <th style="width: 56px;">#</th>
+              <th style="width: 200px;">User</th>
+              <th>Comment</th>
+              <th style="width: 140px;">@Mentions</th>
+              <th style="width: 170px;">Status</th>
+            </tr>
+          </thead>
+          <tbody id="commentsTableBody">
+            <tr>
+              <td colspan="5" class="empty-cell">
+                No comments loaded yet. Open an Instagram post and use the extension icon, or click <strong>Load Sample Giveaway</strong> above.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="tablePaginationNote" class="table-footer hidden"></div>
+    </section>
+  </div>
+
+  <!-- Import / Paste Modal -->
+  <div id="importModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="importModalTitle">Import or Paste Comments</h2>
+        <button type="button" id="closeImportModalBtn" class="icon-close" aria-label="Close">&times;</button>
+      </div>
+      <p class="modal-desc">
+        Upload a <code>.csv</code> or <code>.json</code> file, or paste lines in <code>username, comment text</code> or <code>@username: comment text</code> format (raw Instagram JSON responses work too!).
+      </p>
+
+      <div class="file-upload-row">
+        <input type="file" id="importFileInput" accept=".csv,.json,.txt" />
+      </div>
+
+      <textarea
+        id="importTextarea"
+        class="text-input import-textarea"
+        rows="8"
+        placeholder="@alice: Love this giveaway! @bob @charlie #giveaway&#10;@dave: Count me in! @eve @frank #giveaway"
+      ></textarea>
+
+      <div id="importErrorMsg" class="error-banner hidden"></div>
+
+      <div class="modal-actions">
+        <button type="button" id="cancelImportBtn" class="btn btn-outline">Cancel</button>
+        <button type="button" id="confirmImportBtn" class="btn btn-primary">Load Comments</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Instagram Session Modal -->
+  <div id="sessionModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="sessionModalTitle">
+    <div class="modal-card session-modal-card">
+      <div class="modal-header">
+        <h2 id="sessionModalTitle">🍪 Instagram Session &amp; Cookie Permission</h2>
+        <button type="button" id="closeSessionModalBtn" class="icon-close" aria-label="Close">&times;</button>
+      </div>
+
+      <div class="session-modal-body">
+        <div id="sessionActiveInfo" class="session-connected-banner hidden">
+          <div class="banner-icon">✅</div>
+          <div class="banner-text">
+            <strong>Connected to Instagram</strong>
+            <p id="connectedUsernameLabel">Logged in</p>
+          </div>
+          <button type="button" id="disconnectSessionBtn" class="btn btn-outline btn-sm">Disconnect</button>
+        </div>
+
+        <div class="cookie-permission-card">
+          <div class="permission-icon" aria-hidden="true">⚡</div>
+          <div class="permission-content">
+            <h3 class="permission-title">Automatic 1-Click Cookie Acceptance</h3>
+            <p class="permission-desc">
+              Instagram requires an active login session to read 5,000+ comments. Click <strong>Allow &amp; Run</strong> to automatically accept cookies and start reading comments immediately without any manual copying.
+            </p>
+          </div>
+        </div>
+
+        <div class="auto-connect-hero-row">
+          <button type="button" id="autoDetectSessionBtn" class="btn btn-primary btn-auto-run">
+            ⚡ Allow Cookies &amp; Run Automatically
+          </button>
+          <a id="openInstagramTabLink" href="https://www.instagram.com" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm hidden">
+            🌐 Open Instagram in Browser to Log In
+          </a>
+        </div>
+
+        <p class="field-hint text-center">
+          🔒 100% Private. Your session is kept strictly on your own computer in <code>.session.json</code>.
+        </p>
+
+        <details id="manualSessionDetails" class="manual-session-details">
+          <summary class="manual-session-summary">Advanced: Enter sessionid manually</summary>
+          <div class="manual-session-body">
+            <div class="form-group">
+              <label for="sessionIdInput" class="group-label">Instagram <code>sessionid</code> Cookie Value</label>
+              <div class="session-input-wrap">
+                <input
+                  type="password"
+                  id="sessionIdInput"
+                  class="text-input"
+                  placeholder="e.g. 7192837482%3Aabc123xyz... or paste sessionid"
+                  autocomplete="off"
+                />
+                <button type="button" id="toggleSessionVisibilityBtn" class="btn-eye" aria-label="Toggle visibility">👁</button>
+              </div>
+            </div>
+            <button type="button" id="saveSessionBtn" class="btn btn-outline btn-sm">Save &amp; Verify Manual Session</button>
+          </div>
+        </details>
+
+        <div id="sessionErrorMsg" class="error-banner hidden"></div>
+        <div id="sessionSuccessMsg" class="success-banner hidden"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" id="cancelSessionModalBtn" class="btn btn-outline">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script src="parser.js"></script>
+  <script src="tab-bridge.js"></script>
+  <script src="studio.js"></script>
+</body>
+</html>

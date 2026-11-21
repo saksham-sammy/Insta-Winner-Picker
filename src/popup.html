@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Insta Lucky Picker</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="popup-shell">
+    <header class="header">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">🏆</div>
+        <div>
+          <h1>Insta Lucky Picker</h1>
+          <p class="subtitle">Pick a fair giveaway winner from any post</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- No Instagram post/reel tab found -->
+    <section id="notPostView" class="card notice-card hidden">
+      <div class="notice-emoji">📸</div>
+      <h2>Open an Instagram Post or Reel</h2>
+      <p>
+        Open a post (<code>instagram.com/p/...</code> or <code>/reel/...</code>) in a tab while logged in to Instagram, then click this icon again.
+      </p>
+      <button id="openStudioStandaloneBtn" class="btn btn-secondary full-width">
+        Open Winner Studio (Demo / CSV Import)
+      </button>
+    </section>
+
+    <!-- Instagram post/reel tab detected -->
+    <main id="postView" class="hidden">
+      <section class="card post-meta-card">
+        <div class="meta-row">
+          <span class="badge" id="shortcodeBadge">/p/...</span>
+          <span class="owner-tag" id="detectedLabel">Instagram post detected</span>
+        </div>
+        <div class="status-box">
+          <div class="status-dot done"></div>
+          <span id="statusText">Ready — the Studio will read every comment live.</span>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button id="collectAndOpenBtn" class="btn btn-primary full-width">
+          🚀 Read All Comments &amp; Open Studio
+        </button>
+        <button id="openStudioBtn" class="btn btn-secondary full-width">
+          Open Studio Only
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <script src="parser.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+.session.json
+node_modules/
+.playwright-mcp/
+src/_harness.html
+data/*.json
+*.log
+.DS_Store
+Thumbs.db
+
+# Local tooling & environment
+.env
+.env.*
+!.env.example
+!.env.template
+__pycache__/
+*.py[cod]
+AGENTS.md
+GEMINI.md
+CLAUDE.md
+.cursorrules
+AI_SHARED_MEMORY.md
+.gitpulse/
